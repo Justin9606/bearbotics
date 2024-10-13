@@ -10,8 +10,16 @@ import LargeButton from "./LargeButton";
 import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
 import TextButton from "./TextButton";
 import StarButton from "./StarButton";
-import { TableCell, TableRow, Checkbox } from "@mui/material";
-import useDebounce from "../hooks/useDebounce"; // Import the debounce hook
+import {
+  TableCell,
+  TableRow,
+  Checkbox,
+  TableHead,
+  TableBody,
+  TableContainer,
+  Table,
+} from "@mui/material";
+import useDebounce from "../hooks/useDebounce";
 
 interface Location {
   id: number;
@@ -153,19 +161,19 @@ const FleetDashboard: React.FC = () => {
 
   const renderRow = (location: Location) => (
     <TableRow key={location.id}>
-      <TableCell padding="checkbox">
+      <TableCell padding="checkbox" style={{ width: "5%" }}>
         <Checkbox
           checked={location.isActive}
           onChange={() => handleCheckboxChange(location.id)}
         />
       </TableCell>
-      <TableCell>
+      <TableCell style={{ width: "5%" }}>
         <StarButton
           starred={location.starred}
           onClick={() => toggleStarred(location.id)}
         />
       </TableCell>
-      <TableCell>
+      <TableCell style={{ width: "45%" }}>
         <LargeButton
           hasRightArrow={true}
           label={location.name}
@@ -173,7 +181,7 @@ const FleetDashboard: React.FC = () => {
           onClick={() => {}}
         />
       </TableCell>
-      <TableCell>
+      <TableCell style={{ width: "25%" }}>
         {location.robot.is_online ? (
           <>
             <FiberManualRecordIcon style={{ color: "#00D15E" }} />
@@ -183,7 +191,7 @@ const FleetDashboard: React.FC = () => {
           <TextButton label="Add" onClick={() => {}} underline={true} />
         )}
       </TableCell>
-      <TableCell>{location.type}</TableCell>
+      <TableCell style={{ width: "20%" }}>{location.type}</TableCell>
     </TableRow>
   );
 
@@ -206,11 +214,30 @@ const FleetDashboard: React.FC = () => {
         <p>Loading...</p>
       ) : (
         <>
-          <CustomTable
-            data={paginatedLocations}
-            setData={setLocations}
-            renderRow={renderRow}
-          />
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell padding="checkbox" style={{ width: "5%" }}>
+                    <Checkbox
+                      indeterminate={
+                        locations.some((loc) => loc.isActive) &&
+                        !locations.every((loc) => loc.isActive)
+                      }
+                      onChange={handleCheckAll}
+                    />
+                  </TableCell>
+                  <TableCell style={{ width: "5%" }}>
+                    <span>&#8635;</span> {/* You can use an icon here */}
+                  </TableCell>
+                  <TableCell style={{ width: "45%" }}>Locations</TableCell>
+                  <TableCell style={{ width: "25%" }}>Robots</TableCell>
+                  <TableCell style={{ width: "20%" }}>Location Types</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>{paginatedLocations.map(renderRow)}</TableBody>
+            </Table>
+          </TableContainer>
           <CustomPagination
             count={Math.ceil(getFilteredLocations().length / locationsPerPage)}
             onChange={handlePageChange}
