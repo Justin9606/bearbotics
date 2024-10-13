@@ -11,7 +11,7 @@ type StarButtonProps = {
 const StarButton: React.FC<StarButtonProps> = ({ starred, onClick }) => {
   return (
     <IconButton onClick={onClick}>
-      {starred ? <StarIcon /> : <StarBorderIcon />}
+      {starred ? <StarIcon style={{ color: "#f7b500" }} /> : <StarBorderIcon />}
     </IconButton>
   );
 };

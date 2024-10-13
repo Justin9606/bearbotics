@@ -1,24 +1,17 @@
-import React, { useState, ChangeEvent, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
 import styled from "@emotion/styled";
-import TextButton from "./TextButton";
 import HeaderTitle from "./HeaderTitle";
 import CustomTable from "./CustomTable";
 import CustomPagination from "./CustomPagination";
 import DropdownMenu from "./DropdownMenu";
 import InputComponent from "./InputComponent";
-import StarButton from "./StarButton";
-import CheckboxComponent from "./CheckboxComponent";
 import LargeButton from "./LargeButton";
 import FiberManualRecordIcon from "@mui/icons-material/FiberManualRecord";
-import {
-  TableCell,
-  TableRow,
-  TableHead,
-  TableBody,
-  TableContainer,
-  Table,
-} from "@mui/material";
+import TextButton from "./TextButton";
+import StarButton from "./StarButton";
+import { TableCell, TableRow, Checkbox } from "@mui/material";
+import useDebounce from "../hooks/useDebounce"; // Import the debounce hook
 
 interface Location {
   id: number;
@@ -38,12 +31,20 @@ const FleetDashboard: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [loading, setLoading] = useState<boolean>(true);
 
+  // Use the debounce hook for the search query with 500ms delay
+  const debouncedSearchQuery = useDebounce(searchQuery, 500);
+
   useEffect(() => {
     const fetchLocations = async () => {
       setLoading(true);
       try {
+        const searchParam = debouncedSearchQuery
+          ? `?search=${debouncedSearchQuery}`
+          : "";
+        const filterParam = filter === "Starred" ? "?starred=true" : "";
+
         const [locationsRes, starredRes] = await Promise.all([
-          axios.get("/locations"),
+          axios.get(`/locations${searchParam}${filterParam}`),
           axios.get("/starred_location_ids"),
         ]);
 
@@ -52,6 +53,8 @@ const FleetDashboard: React.FC = () => {
           (loc: Location) => ({
             ...loc,
             starred: starredIds.includes(loc.id),
+            isActive: false, // Default isActive to false if not provided by API
+            type: loc.type || "Unknown", // Provide a fallback if necessary
           })
         );
 
@@ -64,15 +67,13 @@ const FleetDashboard: React.FC = () => {
     };
 
     fetchLocations();
-  }, []);
+  }, [debouncedSearchQuery, filter]);
 
-  // Handle starring and un-starring locations
   const toggleStarred = async (locationId: number) => {
     const updatedLocations = locations.map((loc) =>
       loc.id === locationId ? { ...loc, starred: !loc.starred } : loc
     );
 
-    // Update state immediately to trigger re-render
     setLocations(updatedLocations);
 
     const starredIds = updatedLocations
@@ -83,13 +84,11 @@ const FleetDashboard: React.FC = () => {
       await axios.put("/starred_location_ids", starredIds);
     } catch (error) {
       console.error("Error updating starred locations:", error);
-      // If there's an error, revert the state change
       setLocations(locations);
       alert("Could not star an item due to unexpected error");
     }
   };
 
-  // Handle checkbox change
   const handleCheckboxChange = (locationId: number) => {
     const updatedLocations = locations.map((loc) =>
       loc.id === locationId ? { ...loc, isActive: !loc.isActive } : loc
@@ -97,7 +96,6 @@ const FleetDashboard: React.FC = () => {
     setLocations(updatedLocations);
   };
 
-  // Handle "check all" checkbox
   const handleCheckAll = () => {
     const allChecked = locations.every((location) => location.isActive);
     const updatedLocations = locations.map((loc) => ({
@@ -107,38 +105,29 @@ const FleetDashboard: React.FC = () => {
     setLocations(updatedLocations);
   };
 
-  // Handle dropdown filter change
   const handleFilterChange = (value: string) => {
     setFilter(value);
-    setCurrentPage(1); // Reset to the first page when filter changes
+    setCurrentPage(1);
   };
 
-  // Filter the locations based on dropdown value and search query
   const getFilteredLocations = () => {
     let filteredLocations = [...locations];
 
-    // Apply filter based on dropdown selection
     if (filter === "Starred") {
-      // Only show locations that are starred
       filteredLocations = filteredLocations.filter(
-        (location) => location.starred === true
-      );
-    } else if (filter === "Serving") {
-      filteredLocations = filteredLocations.filter(
-        (location) => location.type === "Serving"
-      );
-    } else if (filter === "Disinfection") {
-      filteredLocations = filteredLocations.filter(
-        (location) => location.type === "Disinfection"
+        (location) => location.starred
       );
     }
 
-    // Apply search query filter
-    if (searchQuery) {
+    if (debouncedSearchQuery) {
       filteredLocations = filteredLocations.filter(
         (location) =>
-          location.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          location.robot.id.toLowerCase().includes(searchQuery.toLowerCase())
+          location.name
+            .toLowerCase()
+            .includes(debouncedSearchQuery.toLowerCase()) ||
+          location.robot.id
+            .toLowerCase()
+            .includes(debouncedSearchQuery.toLowerCase())
       );
     }
 
@@ -165,15 +154,15 @@ const FleetDashboard: React.FC = () => {
   const renderRow = (location: Location) => (
     <TableRow key={location.id}>
       <TableCell padding="checkbox">
-        <CheckboxComponent
+        <Checkbox
           checked={location.isActive}
-          onChange={() => handleCheckboxChange(location.id)} // Independent checkbox logic
+          onChange={() => handleCheckboxChange(location.id)}
         />
       </TableCell>
       <TableCell>
         <StarButton
           starred={location.starred}
-          onClick={() => toggleStarred(location.id)} // Independent star logic
+          onClick={() => toggleStarred(location.id)}
         />
       </TableCell>
       <TableCell>
@@ -187,9 +176,7 @@ const FleetDashboard: React.FC = () => {
       <TableCell>
         {location.robot.is_online ? (
           <>
-            <FiberManualRecordIcon
-              style={{ color: "#00D15E", fontSize: "small" }}
-            />
+            <FiberManualRecordIcon style={{ color: "#00D15E" }} />
             {location.robot.id}
           </>
         ) : (
@@ -219,28 +206,11 @@ const FleetDashboard: React.FC = () => {
         <p>Loading...</p>
       ) : (
         <>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell padding="checkbox">
-                    <CheckboxComponent
-                      checked={locations.every((location) => location.isActive)}
-                      onChange={handleCheckAll} // For the "check all" checkbox
-                    />
-                  </TableCell>
-                  <TableCell></TableCell> {/* Star button header (empty) */}
-                  <TableCell>Locations</TableCell>
-                  <TableCell>Robots</TableCell>
-                  <TableCell>Location Types</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {paginatedLocations.map((location) => renderRow(location))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-
+          <CustomTable
+            data={paginatedLocations}
+            setData={setLocations}
+            renderRow={renderRow}
+          />
           <CustomPagination
             count={Math.ceil(getFilteredLocations().length / locationsPerPage)}
             onChange={handlePageChange}

@@ -1,5 +1,5 @@
 import { DefaultBodyType, rest } from "msw";
-import { Location, locations } from "./db"; // Import the locations data from db.ts
+import { Location, locations } from "./db";
 
 interface LocationsResult {
   total_count: number;

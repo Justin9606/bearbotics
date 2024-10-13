@@ -34,19 +34,21 @@ const CustomTable: React.FC<CustomTableProps> = ({
 }) => {
   const [selectAll, setSelectAll] = useState(false);
 
+  // Handle Select All checkbox toggle
   const handleSelectAll = () => {
     setSelectAll(!selectAll);
     const updatedData = data.map((item) => ({
       ...item,
-      starred: selectAll ? false : true,
+      isActive: !selectAll, // toggle isActive (checkbox selection)
     }));
     setData(updatedData);
   };
 
+  // Handle Redo Star toggle (for starring/un-starring all items)
   const handleRedoAllStars = () => {
     const updatedData = data.map((item) => ({
       ...item,
-      starred: !item.starred,
+      starred: !item.starred, // Toggle the star icon
     }));
     setData(updatedData);
   };
